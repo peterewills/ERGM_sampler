@@ -1,6 +1,6 @@
 # Gibbs Sampler for Exponential Random Graph Models
 
-### Peter Wills, 6/20/2017
+### Peter Wills
 
 ## Mathematical Background
 
@@ -8,24 +8,24 @@ The following discussion assumes a basic understanding of network science. Pleas
 
 This module consists solely of a Gibbs sampler that can generate draws from an Exponential Random Graph Model (ERGM). This model assigns each graph G  a probability
 
-$$ P(G) = \frac{1}{Z} \exp\left\{\sum_{i=1}^r \theta_i g_i(G)\right\}$$
+	P(G) = Z^(-1) exp[sum_i(theta_i g_i(G))]
 
-where $g_i(G)$ is some graph metric (e.g., $g_1(G)$ is the volume of $G$ while $g_2(G)$ is the number of triangles) and the $\theta_i$ are parameters that tell us "how important" each metric is in the distribution.
+where the `g_i(G)` are some graph metrics (e.g., `g_1(G)` is the volume of G while `g_2(G)` is the number of triangles) and the `theta_i` are parameters that tell us "how important" each metric is in the distribution.
 
-The trick here is that we don't want to, and in practice cannot, calculate the normalizing factor $Z$. So we need a sampling method that doesn't depend on $Z$. This is where Gibbs sampling comes in.
+The trick here is that we don't want to, and in practice cannot, calculate the normalizing factor Z. So we need a sampling method that doesn't depend on Z. This is where Gibbs sampling comes in.
 
-A detailed discussion of this method of sampling  outline the algorithm. We'll denote subsequent graphs with $G^t$, and edges in a graph with $G_{ij}$. 
-
-- Start with a graph $G^0$.
-- For $t=1,2,\ldots$:
-    - For $i=1,\ldots,n$:
-        - For $j=i+1,\ldots,n$:
-            - Let $G^*$ be the graph where $G^*_{ij} = 1-G^t_{ij}$ and all other edges are the same.
-            - Calculate the Hastings Ratio:
-            $$ H = \min\left\{1,\frac{P(G^*)}{P(G^t)}\right\} = \min\left\{ 1, \exp\left\{\sum_{i=1}^r \theta_i (g_i(G^*)-g_i(G^t))\right\}\right\}$$
-            - With probability $H$, assign $G^{t+1}=G^*$. Otherwise, assign $G^{t+1}=G^t$.
+We will now outline the algorithm. We use the adjacency matrix `A` as our representation of the graph.
             
-This process loops through all the ${n\choose 2}$ edges in the graph, so will be very slow unless the calculation of the terms $\Delta g_i = g_i(G^*)-g_i(G^t)$ is quick. This depends on our choice of metric $g_i$, of course. We want to focus on ones that have easy update formulas, that can ideally be computed in linear time.
+	A = A0
+	for k = 1,2,...: # iterate as long as you wish
+		for i = 1,2,...,n: # size of the matrix
+			for j = i+1,i+2,...,n:
+				H = min( 1,exp(sum(theta*dg(A,i,j))) )
+				with probability H:
+					A[i,j] = 1 - A[i,j]
+		record A to sample list
+            
+The array `dg(A,i,j)` is the change in the metrics `g` if we flip edge `i,j`, starting with the state `A`. This process loops through all the `binomial(n,2)` edges in the graph and calculates the change in metrics $dg$ at each step, so will be very slow unless the calculation of the terms `dg(A,i,j)` is quick. This depends on our choice of metrics, of course. We want to focus on ones that have easy update formulas, that can ideally be computed in linear time.
 
 Note that most practicioners recommend using some kind of "burn-in period," where the graphs are not recorded. This is based on the assumption that our algorithm is not sufficiently near convergence at this point. In this module, the burn-in fraction is a user-defined parameter, set at 10% by default.
 
